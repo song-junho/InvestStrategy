@@ -14,6 +14,7 @@ class Stock:
         self.start_date = start_date
         self.end_date = end_date
         self.list_date_eom = pd.date_range(start_date, end_date, freq="M")
+        self.dict_market_cap = {}
 
         # 가격 Dictionary 생성
         with open(r"D:\MyProject\StockPrice\DictDfStock.pickle", 'rb') as fr:
@@ -34,19 +35,40 @@ class Stock:
         #     "commodity": {}
         # }
 
+    def hashing_market_cap(self, df_factor_data):
+
+        list_item_cd = df_factor_data["cmp_cd"].unique()
+        list_date = pd.to_datetime(df_factor_data["date"].unique())
+
+        for item_cd in tqdm(list_item_cd):
+
+            if (item_cd in self.dict_market_cap.keys()) == False:
+                self.dict_market_cap[item_cd] = {}
+
+            for p_date in list_date:
+                try:
+                    self.dict_market_cap[item_cd][p_date] = self.dict_df_stock[item_cd].loc[p_date, "MarketCap"]
+                except:
+                    continue
+
     def get_market_cap(self, v_date, cmp_cd):
         '''
         리밸런싱 일자 시가총액
         '''
-        if cmp_cd not in (self.dict_df_stock.keys()):
-            return 0
-        else:
-            df_stock = self.dict_df_stock[cmp_cd].reset_index()
 
-        if len(df_stock.loc[df_stock["Date"] <= v_date]) == 0:
-            return 0
-        else:
-            market_cap = df_stock.loc[df_stock["Date"] <= v_date].iloc[-1]["MarketCap"]
+        try:
+            market_cap = self.dict_market_cap[cmp_cd][v_date]
+
+        except:
+            if cmp_cd not in (self.dict_df_stock.keys()):
+                return 0
+            else:
+                df_stock = self.dict_df_stock[cmp_cd].reset_index()
+
+            if len(df_stock.loc[df_stock["Date"] <= v_date]) == 0:
+                return 0
+            else:
+                market_cap = df_stock.loc[df_stock["Date"] <= v_date].iloc[-1]["MarketCap"]
 
         return market_cap
 
@@ -160,6 +182,7 @@ class Value(Stock):
 
             # 1. 투자 종목군 설정
             df_factor_data = self.filter_factor_data(df_factor_data, strategy_nm)
+            self.hashing_market_cap(df_factor_data)
 
             # 2. 투자 비중(weight) 설정
             for w_type in ["equal", "market_cap", "z_score"]:
@@ -218,6 +241,7 @@ class Growth(Stock):
 
             # 1. 투자 종목군 설정
             df_factor_data = self.filter_factor_data(strategy_nm)
+            self.hashing_market_cap(df_factor_data)
 
             # 2. 투자 비중(weight) 설정
             for w_type in ["equal", "market_cap", "z_score"]:
@@ -240,7 +264,8 @@ class Growth(Stock):
 class Size(Stock):
 
     my_strategy = {
-        "market_cap": pd.DataFrame(),  # 시총 하위 20% 종목
+        "big_cap": pd.DataFrame(),  # 시총 상위 20% 종목
+        "small_cap": pd.DataFrame(),  # 시총 하위 20% 종목
     }
 
     # save data
@@ -249,8 +274,13 @@ class Size(Stock):
 
     def filter_factor_data(self, df_factor_data, strategy_nm):
 
-        if strategy_nm == "market_cap":
+        if strategy_nm == "small_cap":
             df_factor_data = self.stock_factor_size[self.stock_factor_size["quantile"] == 0]
+            df_factor_data = df_factor_data[df_factor_data["item_nm"] == "market_cap"]
+            df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
+
+        elif strategy_nm == "big_cap":
+            df_factor_data = self.stock_factor_size[self.stock_factor_size["quantile"] == 4]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "market_cap"]
             df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
 
@@ -272,6 +302,7 @@ class Size(Stock):
 
             # 1. 투자 종목군 설정
             df_factor_data = self.filter_factor_data(df_factor_data, strategy_nm)
+            self.hashing_market_cap(df_factor_data)
 
             # 2. 투자 비중(weight) 설정
             for w_type in ["equal", "market_cap", "z_score"]:
