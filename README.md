@@ -22,7 +22,7 @@
 
 
 ***
-# Data Sample
+# OutPut Sample
 
 ### columns info
  * item_type
