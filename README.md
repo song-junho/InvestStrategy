@@ -1,5 +1,6 @@
 # InvestStrategy
-> FactorSelection 을 통해 생성한 Factor별 분위값으로 전략별 매월 투자 스케줄 생성
+> FactorSelection 을 통해 생성한 Factor별 분위값으로 전략별 매월 투자 스케줄 생성  
+> 분위값을 통한 L/S 전략 검증
 
 각 전략을 key-value 형태로 저장한다.
 
