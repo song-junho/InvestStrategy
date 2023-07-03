@@ -136,6 +136,7 @@ class Stock:
         with open(r'D:\MyProject\FactorSelection\monthly_invest_strategy.pickle', 'wb') as fw:
             pickle.dump(self.monthly_invest_strategy, fw)
 
+
 class Value(Stock):
 
     my_strategy = {
@@ -144,24 +145,26 @@ class Value(Stock):
         "por_spr": pd.DataFrame()  # POR_SPREAD 상위 20% 종목 (밸류는 업사이드로 산정했기 때문에 상위 목록이 상대적 밸류가 좋다)
     }
 
+    style_type = 'value'
+
     # save data
     with open(r'D:\MyProject\FactorSelection\stock_factor_value_quantiling.pickle', 'rb') as fr:
-        stock_factor_value = pickle.load(fr)
+        stock_factor = pickle.load(fr)
 
     def filter_factor_data(self, df_factor_data, strategy_nm):
 
         if strategy_nm == "por":
-            df_factor_data = self.stock_factor_value[self.stock_factor_value["quantile"] == 0]
+            df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 0]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "por"]
             df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
 
         elif strategy_nm == "por_cagr":
-            df_factor_data = self.stock_factor_value[self.stock_factor_value["quantile"] == 0]
+            df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 0]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "por_cagr"]
             df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
 
         elif strategy_nm == "por_spr":
-            df_factor_data = self.stock_factor_value[self.stock_factor_value["quantile"] == 4]
+            df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 4]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "por_spr"]
 
         df_factor_data = df_factor_data.sort_values(["date", "cmp_cd"]).reset_index(drop=True)
@@ -199,7 +202,7 @@ class Value(Stock):
             # save
             self.my_strategy[strategy_nm] = df_invest_sch
 
-        self.monthly_invest_strategy["stock"]["value"] = self.my_strategy
+        self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
 
 
@@ -213,6 +216,8 @@ class Growth(Stock):
         "op_qoq_cagr": pd.DataFrame(),  #
         "op_qoq_spread": pd.DataFrame()  #
     }
+
+    style_type = 'growth'
 
     # save data
     with open(r'D:\MyProject\FactorSelection\stock_factor_growth_quantiling.pickle', 'rb') as fr:
@@ -258,7 +263,7 @@ class Growth(Stock):
             # save
             self.my_strategy[strategy_nm] = df_invest_sch
 
-        self.monthly_invest_strategy["stock"]["growth"] = self.my_strategy
+        self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
 
 class Size(Stock):
@@ -268,19 +273,21 @@ class Size(Stock):
         "small_cap": pd.DataFrame(),  # 시총 하위 20% 종목
     }
 
+    style_type = 'size'
+
     # save data
     with open(r'D:\MyProject\FactorSelection\stock_factor_size_quantiling.pickle', 'rb') as fr:
-        stock_factor_size = pickle.load(fr)
+        stock_factor = pickle.load(fr)
 
     def filter_factor_data(self, df_factor_data, strategy_nm):
 
         if strategy_nm == "small_cap":
-            df_factor_data = self.stock_factor_size[self.stock_factor_size["quantile"] == 0]
+            df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 0]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "market_cap"]
             df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
 
         elif strategy_nm == "big_cap":
-            df_factor_data = self.stock_factor_size[self.stock_factor_size["quantile"] == 4]
+            df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 4]
             df_factor_data = df_factor_data[df_factor_data["item_nm"] == "market_cap"]
             df_factor_data["z_score"] = 1 / df_factor_data["z_score"]
 
@@ -319,5 +326,68 @@ class Size(Stock):
             # save
             self.my_strategy[strategy_nm] = df_invest_sch
 
-        self.monthly_invest_strategy["stock"]["size"] = self.my_strategy
+        self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
+        self.save_data()
+
+class Quality(Stock):
+
+    my_strategy = {
+        "gpm": pd.DataFrame(),
+        "gpm_cagr": pd.DataFrame(),
+        "gpm_spread": pd.DataFrame(),
+        "opm": pd.DataFrame(),
+        "opm_cagr": pd.DataFrame(),
+        "opm_spread": pd.DataFrame(),
+        "roe": pd.DataFrame(),
+        "roe_cagr": pd.DataFrame(),
+        "roe_spread": pd.DataFrame()
+    }
+
+    style_type = "quality"
+
+    # save data
+    with open(r'D:\MyProject\FactorSelection\stock_factor_quality_quantiling.pickle', 'rb') as fr:
+        stock_factor = pickle.load(fr)
+
+    def filter_factor_data(self, strategy_nm):
+
+        df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 4]
+        df_factor_data = df_factor_data[df_factor_data["item_nm"] == strategy_nm]
+
+        df_factor_data = df_factor_data.sort_values(["date", "cmp_cd"]).reset_index(drop=True)
+        df_factor_data = df_factor_data[["date", "cmp_cd", "z_score"]]
+
+        return df_factor_data
+
+    def update_schedule(self):
+        '''
+        전략 업데이트
+        :return:
+        '''
+
+        for strategy_nm in self.my_strategy.keys():
+
+            df_invest_sch = pd.DataFrame(columns=["date", "item_type", "item_cd", "w_type", "weight"])
+            df_factor_data = pd.DataFrame()
+
+            # 1. 투자 종목군 설정
+            df_factor_data = self.filter_factor_data(strategy_nm)
+            self.hashing_market_cap(df_factor_data)
+
+            # 2. 투자 비중(weight) 설정
+            for w_type in ["equal", "market_cap", "z_score"]:
+
+                df_factor_data = self.get_weight(w_type, df_factor_data)
+                df_factor_data["w_type"] = w_type
+
+                df = df_factor_data[["date", "cmp_cd", "w_type", "weight"]].rename(columns={"cmp_cd": "item_cd"})
+                df["item_type"] = "stock"
+                df = df[["date", "item_type", "item_cd", "w_type", "weight"]]
+
+                df_invest_sch = pd.concat([df_invest_sch, df])
+
+            # save
+            self.my_strategy[strategy_nm] = df_invest_sch
+
+        self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
