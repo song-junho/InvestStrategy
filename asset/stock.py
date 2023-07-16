@@ -60,10 +60,13 @@ class Stock:
             market_cap = self.dict_market_cap[cmp_cd][v_date]
 
         except:
+            print()
             if cmp_cd not in (self.dict_df_stock.keys()):
                 return 0
             else:
                 df_stock = self.dict_df_stock[cmp_cd].reset_index()
+                if len(df_stock) == 0:
+                    return 0
 
             if len(df_stock.loc[df_stock["Date"] <= v_date]) == 0:
                 return 0
@@ -204,6 +207,7 @@ class Value(Stock):
 
         self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
+        print("Complete:" , __name__)
 
 
 class Growth(Stock):
@@ -265,6 +269,7 @@ class Growth(Stock):
 
         self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
+        print("Complete:", __name__)
 
 class Size(Stock):
 
@@ -328,6 +333,8 @@ class Size(Stock):
 
         self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
+        print("Complete:", __name__)
+
 
 class Quality(Stock):
 
@@ -391,3 +398,5 @@ class Quality(Stock):
 
         self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
         self.save_data()
+        print("Complete:", __name__)
+
