@@ -400,3 +400,64 @@ class Quality(Stock):
         self.save_data()
         print("Complete:", __name__)
 
+
+class Momentum(Stock):
+
+    my_strategy = {
+        "z_score_0to5": pd.DataFrame(),  # 구간 변화율 z_score
+        "z_score_5to20": pd.DataFrame(),  # 구간 변화율 z_score
+        "z_score_20to60": pd.DataFrame(),  # 구간 변화율 z_score
+        "z_score_60to120": pd.DataFrame(),  # 구간 변화율 z_score
+        "z_score_avg": pd.DataFrame(),  # 구간별 변화율 z_score 평균
+    }
+
+    style_type = 'momentum'
+
+    # save data
+    with open(r'D:\MyProject\FactorSelection\stock_factor_momentum_quantiling.pickle', 'rb') as fr:
+        stock_factor = pickle.load(fr)
+
+    def filter_factor_data(self, df_factor_data, strategy_nm):
+
+        df_factor_data = self.stock_factor[self.stock_factor["quantile"] == 4]
+        df_factor_data = df_factor_data[df_factor_data["item_nm"] == strategy_nm]
+
+        df_factor_data = df_factor_data.sort_values(["date", "cmp_cd"]).reset_index(drop=True)
+        df_factor_data = df_factor_data[["date", "cmp_cd", "z_score"]]
+
+        return df_factor_data
+
+    def update_schedule(self):
+        '''
+        전략 업데이트
+        :return:
+        '''
+
+        for strategy_nm in self.my_strategy.keys():
+
+            df_invest_sch = pd.DataFrame(columns=["date", "item_type", "item_cd", "w_type", "weight"])
+            df_factor_data = pd.DataFrame()
+
+            # 1. 투자 종목군 설정
+            df_factor_data = self.filter_factor_data(df_factor_data, strategy_nm)
+            self.hashing_market_cap(df_factor_data)
+
+            # 2. 투자 비중(weight) 설정
+            for w_type in ["equal", "market_cap", "z_score"]:
+
+                df_factor_data = self.get_weight(w_type, df_factor_data)
+                df_factor_data["w_type"] = w_type
+
+                df = df_factor_data[["date", "cmp_cd", "w_type", "weight"]].rename(columns={"cmp_cd": "item_cd"})
+                df["item_type"] = "stock"
+                df = df[["date", "item_type", "item_cd", "w_type", "weight"]]
+
+                df_invest_sch = pd.concat([df_invest_sch, df])
+
+            # save
+            self.my_strategy[strategy_nm] = df_invest_sch
+
+        self.monthly_invest_strategy["stock"][self.style_type] = self.my_strategy
+        self.save_data()
+        print("Complete:", __name__)
+
