@@ -408,6 +408,7 @@ class Momentum(Stock):
         "z_score_5to20": pd.DataFrame(),  # 구간 변화율 z_score
         "z_score_20to60": pd.DataFrame(),  # 구간 변화율 z_score
         "z_score_60to120": pd.DataFrame(),  # 구간 변화율 z_score
+        "z_score_120to240": pd.DataFrame(),  # 구간 변화율 z_score
         "z_score_avg": pd.DataFrame(),  # 구간별 변화율 z_score 평균
     }
 
